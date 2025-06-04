@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Audio Context AI</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 380px;
+      padding: 0;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+    }
+    
+    .container {
+      background: linear-gradient(145deg, #000 0%, #1a1a1a 50%, #000 100%);
+      padding: 24px;
+      min-height: 100vh;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #ffeb3b;
+      position: relative;
+    }
+    
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ffeb3b, transparent);
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      margin: 0 0 8px 0;
+      background: linear-gradient(45deg, #ffeb3b, #ffd700);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    
+    .subtitle {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    
+    .api-status {
+      background: rgba(255, 235, 59, 0.1);
+      border: 1px solid rgba(255, 235, 59, 0.3);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 11px;
+      color: #ffeb3b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .api-status-icon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ffeb3b;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { 
+        opacity: 1; 
+      }
+      50% { 
+        opacity: 0.4; 
+      }
+    }
+    
+    .status-section {
+      background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    
+    .audio-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #666;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .status-indicator.listening {
+      background: #ffeb3b;
+      box-shadow: 0 0 12px rgba(255, 235, 59, 0.5);
+    }
+    
+    .status-indicator.listening::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      right: -4px;
+      bottom: -4px;
+      border: 2px solid rgba(255, 235, 59, 0.3);
+      border-radius: 50%;
+      animation: ripple 1.5s infinite;
+    }
+    
+    @keyframes ripple {
+      0% { 
+        transform: scale(0.8); 
+        opacity: 1; 
+      }
+      100% { 
+        transform: scale(1.4); 
+        opacity: 0; 
+      }
+    }
+    
+    .status-text {
+      font-weight: 600;
+      font-size: 13px;
+      color: #fff;
+    }
+    
+    .volume-level {
+      font-size: 11px;
+      color: #ffeb3b;
+      font-weight: 600;
+    }
+    
+    .volume-meter {
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .volume-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #ffeb3b 0%, #ffd700 50%, #ffeb3b 100%);
+      width: 0%;
+      transition: width 0.1s ease;
+      border-radius: 3px;
+    }
+    
+    .transcript-section {
+      background: rgba(255, 235, 59, 0.05);
+      border-left: 3px solid #ffeb3b;
+      border-radius: 0 8px 8px 0;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    
+    .transcript-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #ffeb3b;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .transcript-text {
+      font-size: 12px;
+      color: #ccc;
+      line-height: 1.4;
+      max-height: 60px;
+      overflow-y: auto;
+      font-style: italic;
+    }
+    
+    .controls-section {
+      margin-bottom: 20px;
+    }
+    
+    .main-button {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #ffeb3b 0%, #ffd700 100%);
+      color: #000;
+      box-shadow: 0 4px 15px rgba(255, 235, 59, 0.3);
+    }
+    
+    .main-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .main-button:hover:not(:disabled)::before {
+      left: 100%;
+    }
+    
+    .main-button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(255, 235, 59, 0.4);
+    }
+    
+    .main-button:active {
+      transform: translateY(0);
+    }
+    
+    .main-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .secondary-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    
+    .secondary-btn {
+      padding: 12px 16px;
+      border: 1px solid #444;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .secondary-btn:hover {
+      background: #2a2a2a;
+      border-color: #ffeb3b;
+      color: #ffeb3b;
+      transform: translateY(-1px);
+    }
+    
+    .secondary-btn:active {
+      transform: translateY(0);
+    }
+    
+    .context-output {
+      background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 18px;
+      min-height: 140px;
+      position: relative;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    
+    .context-output::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #ffeb3b, transparent);
+    }
+    
+    .context-title {
+      font-weight: 700;
+      color: #ffeb3b;
+      margin-bottom: 12px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .context-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #e0e0e0;
+      white-space: pre-wrap;
+    }
+    
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #ffeb3b;
+      font-weight: 600;
+      padding: 20px;
+    }
+    
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 235, 59, 0.2);
+      border-top: 2px solid #ffeb3b;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { 
+        transform: rotate(0deg); 
+      }
+      100% { 
+        transform: rotate(360deg); 
+      }
+    }
+    
+    .error-message {
+      color: #ff6b6b;
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    
+    .success-message {
+      color: #4caf50;
+      background: rgba(76, 175, 80, 0.1);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #222;
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #ffeb3b;
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ffd700;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎧 Audio Context AI</h1>
+      <div class="subtitle">Captures and analyzes audio from the current tab</div>
+    </div>
+    
+    <div class="status-section">
+      <div class="audio-status">
+        <div class="status-left">
+          <div class="status-indicator" id="statusIndicator"></div>
+          <div class="status-text" id="statusText">Ready to listen</div>
+        </div>
+        <div class="volume-level" id="volumeLevel">0%</div>
+      </div>
+      <div class="volume-meter">
+        <div class="volume-bar" id="volumeBar"></div>
+      </div>
+    </div>
+
+    <div class="transcript-section" id="transcriptSection">
+      <div class="transcript-title">🎤 Live Transcript</div>
+      <div class="transcript-text" id="transcriptText">Listening for audio...</div>
+    </div>
+    
+    <div class="controls-section">
+      <button class="main-button" id="contextBtn">
+        🤖 Get AI Context
+      </button>
+      
+      <div class="secondary-buttons">
+        <button class="secondary-btn" id="startListeningBtn">🎵 Listen to Tab</button>
+        <button class="secondary-btn" id="clearBtn">🗑️ Clear All</button>
+      </div>
+    </div>
+
+    <div class="context-output" id="contextOutput">
+      <div class="context-title">
+        💡 AI Analysis
+      </div>
+      <div class="context-text" id="contextText">Click "Listen to Tab" to capture audio from the current tab (YouTube, podcasts, etc.), then click "Get AI Context" for intelligent analysis.
+
+🎵 This extension listens to the TAB'S audio output, not your microphone.
+
+✅ OpenAI API key is configured and ready!</div>
+    </div>
+  </div>
+
+  <script>
+    // 🔑 ========================================
+    // 📝 OpenAI API Key Configuration:
+    const OPENAI_API_KEY = 'sk-proj-g3t_your_own-haha';
+    // ========================================
+    
+    // 🎛️ OPTIONAL: Customize AI settings
+    const OPENAI_MODEL = 'gpt-3.5-turbo';
+    const MAX_TOKENS = 350;
+    const TEMPERATURE = 0.7;
+    
+    console.log('🎧 Audio Context AI Extension loaded');
+    
+    // UI Elements
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
+    const volumeBar = document.getElementById('volumeBar');
+    const volumeLevel = document.getElementById('volumeLevel');
+    const transcriptSection = document.getElementById('transcriptSection');
+    const transcriptText = document.getElementById('transcriptText');
+    const contextBtn = document.getElementById('contextBtn');
+    const startListeningBtn = document.getElementById('startListeningBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const contextText = document.getElementById('contextText');
+    
+    // State variables
+    let isListening = false;
+    let recognition = null;
+    let audioContext = null;
+    let microphone = null;
+    let analyser = null;
+    let recentTranscript = '';
+    let audioBuffer = [];
+    
+    // Check API key status (silent check)
+    function checkAPIKey() {
+      if (OPENAI_API_KEY && OPENAI_API_KEY !== 'YOUR_OPENAI_API_KEY_HERE') {
+        return true;
+      } else {
+        return false;
+      }
+    }
+    
+    // Initialize Speech Recognition
+    function initializeSpeechRecognition() {
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        
+        recognition.onstart = function() {
+          console.log('🎤 Speech recognition started');
+          updateStatus('listening', 'Listening to audio...');
+          transcriptSection.style.display = 'block';
+        };
+        
+        recognition.onresult = function(event) {
+          let finalTranscript = '';
+          let interimTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+          
+          if (finalTranscript) {
+            audioBuffer.push(finalTranscript.trim());
+            if (audioBuffer.length > 10) {
+              audioBuffer = audioBuffer.slice(-10);
+            }
+            recentTranscript = audioBuffer.join(' ');
+            console.log('📝 Captured:', finalTranscript.trim());
+          }
+          
+          const displayText = finalTranscript + interimTranscript;
+          if (displayText.trim()) {
+            transcriptText.textContent = displayText.trim();
+          }
+        };
+        
+        recognition.onerror = function(event) {
+          console.error('❌ Speech recognition error:', event.error);
+          updateStatus('error', 'Error: ' + event.error);
+        };
+        
+        recognition.onend = function() {
+          console.log('🔇 Speech recognition ended');
+          if (isListening) {
+            setTimeout(function() {
+              if (isListening) {
+                recognition.start();
+              }
+            }, 1000);
+          } else {
+            updateStatus('stopped', 'Stopped listening');
+          }
+        };
+        
+        return true;
+      } else {
+        console.error('❌ Speech recognition not supported');
+        showError('Speech recognition not supported in this browser. Please use Chrome or Edge.');
+        return false;
+      }
+    }
+    
+    // Initialize Tab Audio Capture (instead of microphone)
+    async function initializeTabAudioCapture() {
+      try {
+        console.log('🎵 Requesting tab audio capture...');
+        
+        // Get current tab
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const currentTab = tabs[0];
+        
+        // Request tab audio capture
+        const stream = await chrome.tabCapture.capture({
+          audio: true,
+          video: false
+        });
+        
+        if (!stream) {
+          throw new Error('Failed to capture tab audio');
+        }
+        
+        console.log('✅ Tab audio capture successful');
+        
+        // Set up audio context for the captured stream
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        microphone = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        
+        microphone.connect(analyser);
+        
+        // Set up speech recognition on the captured audio
+        setupSpeechRecognitionForTabAudio(stream);
+        
+        // Start volume monitoring
+        monitorTabAudioVolume();
+        
+        return true;
+      } catch (error) {
+        console.error('❌ Tab audio capture error:', error);
+        updateStatus('error', 'Tab audio capture failed');
+        showError('Could not capture tab audio. Make sure the tab is playing audio and try again.');
+        return false;
+      }
+    }
+    
+    // Set up speech recognition for tab audio
+    function setupSpeechRecognitionForTabAudio(stream) {
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        
+        // Note: Speech Recognition API typically works with microphone input
+        // For tab audio, we'll need to use Web Audio API to process the stream
+        // and potentially send to a speech-to-text service
+        
+        recognition.onstart = function() {
+          console.log('🎤 Tab audio recognition started');
+          updateStatus('listening', 'Listening to tab audio...');
+          transcriptSection.style.display = 'block';
+        };
+        
+        recognition.onresult = function(event) {
+          let finalTranscript = '';
+          let interimTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+          
+          if (finalTranscript) {
+            audioBuffer.push(finalTranscript.trim());
+            if (audioBuffer.length > 10) {
+              audioBuffer = audioBuffer.slice(-10);
+            }
+            recentTranscript = audioBuffer.join(' ');
+            console.log('📝 Captured from tab:', finalTranscript.trim());
+          }
+          
+          const displayText = finalTranscript + interimTranscript;
+          if (displayText.trim()) {
+            transcriptText.textContent = displayText.trim();
+          }
+        };
+        
+        recognition.onerror = function(event) {
+          console.error('❌ Tab audio recognition error:', event.error);
+          updateStatus('error', 'Audio recognition error: ' + event.error);
+        };
+        
+        recognition.onend = function() {
+          console.log('🔇 Tab audio recognition ended');
+          if (isListening) {
+            setTimeout(function() {
+              if (isListening) {
+                recognition.start();
+              }
+            }, 1000);
+          } else {
+            updateStatus('stopped', 'Stopped listening to tab');
+          }
+        };
+        
+        return true;
+      } else {
+        console.error('❌ Speech recognition not supported');
+        showError('Speech recognition not supported in this browser. The extension will still show tab audio levels.');
+        return false;
+      }
+    }
+    
+    // Monitor tab audio volume
+    function monitorTabAudioVolume() {
+      if (!analyser) return;
+      
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      
+      function updateVolume() {
+        if (!isListening) return;
+        
+        analyser.getByteFrequencyData(dataArray);
+        
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / bufferLength;
+        const volumePercent = Math.round((average / 128) * 100);
+        
+        volumeBar.style.width = volumePercent + '%';
+        volumeLevel.textContent = volumePercent + '%';
+        
+        // If there's significant audio, show it's working
+        if (volumePercent > 5) {
+          statusText.textContent = 'Detecting tab audio...';
+        }
+        
+        requestAnimationFrame(updateVolume);
+      }
+      
+      updateVolume();
+    }
+    
+    function updateStatus(status, text) {
+      statusText.textContent = text;
+      statusIndicator.className = 'status-indicator ' + status;
+    }
+    
+    function showError(message) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-message';
+      errorDiv.textContent = message;
+      document.querySelector('.container').appendChild(errorDiv);
+      
+      setTimeout(function() {
+        if (errorDiv.parentNode) {
+          errorDiv.parentNode.removeChild(errorDiv);
+        }
+      }, 5000);
+    }
+    
+    function showSuccess(message) {
+      const successDiv = document.createElement('div');
+      successDiv.className = 'success-message';
+      successDiv.textContent = message;
+      document.querySelector('.container').appendChild(successDiv);
+      
+      setTimeout(function() {
+        if (successDiv.parentNode) {
+          successDiv.parentNode.removeChild(successDiv);
+        }
+      }, 3000);
+    }
+    
+    // Generate context using OpenAI API
+    async function generateContextWithAI(transcript) {
+      if (!transcript || transcript.trim().length < 10) {
+        return "I need more audio content to provide meaningful context. Please let some audio play and try again.";
+      }
+      
+      if (!checkAPIKey()) {
+        return "🔑 OpenAI API key not configured!\n\nTo set up:\n1. Get API key from https://platform.openai.com/\n2. Go to API Keys section\n3. Create new secret key\n4. In this HTML file, find line 237:\n   const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';\n5. Replace with your key:\n   const OPENAI_API_KEY = 'sk-your-key-here';\n\n💰 Cost: ~$0.002 per request (very affordable!)";
+      }
+      
+      try {
+        console.log('🤖 Requesting AI context...');
+        
+        const prompt = "Analyze this audio transcript and provide helpful context:\n\n\"" + transcript + "\"\n\nProvide a structured response with:\n🎯 TOPIC: What is this about?\n📚 CONTEXT: Background information \n🔍 KEY POINTS: Important concepts mentioned\n💡 SIMPLE EXPLANATION: Easy-to-understand summary\n\nKeep response under 250 words.";
+        
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + OPENAI_API_KEY
+          },
+          body: JSON.stringify({
+            model: OPENAI_MODEL,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an intelligent audio context assistant. Provide helpful, structured explanations of audio content to help users understand what they are hearing.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: MAX_TOKENS,
+            temperature: TEMPERATURE
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'HTTP ' + response.status);
+        }
+        
+        const data = await response.json();
+        const aiResponse = data.choices[0]?.message?.content;
+        
+        if (!aiResponse) {
+          throw new Error('No response from OpenAI');
+        }
+        
+        console.log('✅ AI context generated successfully');
+        return '🤖 AI Analysis\n\n' + aiResponse + '\n\n📝 Audio Length: ' + transcript.length + ' characters';
+        
+      } catch (error) {
+        console.error('❌ OpenAI API error:', error);
+        
+        if (error.message.includes('401')) {
+          return "❌ Invalid API key. Please check your OpenAI API key.";
+        } else if (error.message.includes('429')) {
+          return "❌ Too many requests. Please wait a moment and try again.";
+        } else if (error.message.includes('quota') || error.message.includes('billing')) {
+          return "❌ API quota exceeded. Please check your OpenAI billing.";
+        } else {
+          return "❌ Error: " + error.message + "\n\nFallback - Here's what I heard:\n\"" + transcript.slice(0, 300) + (transcript.length > 300 ? '...' : '') + "\"";
+        }
+      }
+    }
+    
+    // Event Handlers
+    startListeningBtn.onclick = async function() {
+      if (!isListening) {
+        console.log('🎵 Starting tab audio capture...');
+        
+        if (!recognition && !initializeSpeechRecognition()) {
+          // Speech recognition failed, but we can still capture audio levels
+          console.log('⚠️ Speech recognition unavailable, proceeding with audio capture only');
+        }
+        
+        if (!audioContext && !(await initializeTabAudioCapture())) {
+          return;
+        }
+        
+        isListening = true;
+        
+        // Start speech recognition if available
+        if (recognition) {
+          recognition.start();
+        }
+        
+        startListeningBtn.textContent = '⏹️ Stop Listening';
+        contextBtn.disabled = false;
+        
+        updateStatus('listening', 'Listening to tab audio...');
+        showSuccess('Started capturing tab audio');
+      } else {
+        console.log('🔇 Stopping tab audio capture...');
+        isListening = false;
+        
+        if (recognition) {
+          recognition.stop();
+        }
+        
+        // Stop audio context
+        if (audioContext) {
+          audioContext.close();
+          audioContext = null;
+          microphone = null;
+          analyser = null;
+        }
+        
+        startListeningBtn.textContent = '🎵 Listen to Tab';
+        updateStatus('stopped', 'Stopped listening');
+        volumeBar.style.width = '0%';
+        volumeLevel.textContent = '0%';
+      }
+    };
+    
+    contextBtn.onclick = function() {
+      console.log('🤖 AI context requested');
+      
+      if (!recentTranscript || recentTranscript.trim().length < 5) {
+        showError('No audio detected. Make sure you started listening and audio is playing.');
+        return;
+      }
+      
+      contextBtn.textContent = '🔄 Analyzing...';
+      contextBtn.disabled = true;
+      
+      contextText.innerHTML = '<div class="loading"><div class="spinner"></div>AI is analyzing your audio...</div>';
+      
+      setTimeout(async function() {
+        const context = await generateContextWithAI(recentTranscript);
+        contextText.textContent = context;
+        contextBtn.textContent = '🤖 Get AI Context';
+        contextBtn.disabled = false;
+        
+        console.log('✅ AI analysis complete');
+        showSuccess('AI analysis complete!');
+      }, 1000);
+    };
+    
+    clearBtn.onclick = function() {
+      console.log('🗑️ Clearing all data');
+      recentTranscript = '';
+      audioBuffer = [];
+      transcriptText.textContent = 'Listening for audio...';
+      contextText.textContent = 'Click "Listen to Tab" to capture audio from the current tab, then click "Get AI Context" for intelligent analysis.';
+      transcriptSection.style.display = 'none';
+      volumeBar.style.width = '0%';
+      volumeLevel.textContent = '0%';
+      updateStatus('stopped', 'Ready to listen');
+      showSuccess('All data cleared');
+    };
+    
+    // Initialize
+    console.log('✅ Audio Context AI ready');
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Audio Context AI",
+  "version": "1.0",
+  "description": "AI-powered audio context assistant with tab audio capture",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabCapture"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Audio Context Assistant"
+  }
+}
